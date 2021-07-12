@@ -56,6 +56,23 @@ class CharSkills(Skills):
                 print("How to handle {} has not been coded yet".format(skill))
 
 
+class SavingThrows:
+    """Stores a characters saving throws"""
+    def __init__(self):
+        self.fortitude = 0
+        self.reflex = 0
+        self.will = 0
+        
+    def update_saves(self, char):
+        self.fortitude = char.abilities.mod('constitution') + char.proficiencies.fortitude
+        self.reflex = char.abilities.mod('dexterity') + char.proficiencies.reflex
+        self.will = char.abilities.mod('wisdom') + char.proficiencies.will
+        
+    def __str__(self):
+        """Tells python print how to format these data"""
+        return("\n".join("{:12} {}".format(k, v) for k, v in vars(self).items()))
+
+                
 class AbilityScores:
     """Stores a characters ability scores and calculates the modifier"""
     def __init__(self):
@@ -100,7 +117,7 @@ class CharacterPathfinder2e:
         self.name = name
         self.level = 0
         self.hp = 0
-        self.ac = 0
+        self.ac = 10
         self.fortitude = 0
         self.reflex = 0
         self.will = 0
@@ -109,7 +126,15 @@ class CharacterPathfinder2e:
         self.size = "medium"
         self.abilities = AbilityScores() #move to playerClass?
         self.skills = CharSkills() #should maybe move to the playerClass?
+        self.saves = SavingThrows()
         self.proficiencies = Skills() #should maybe move to the playerClass?
+        #need to add more to profs class is no problem:
+        self.proficiencies.perception = 0
+        self.proficiencies.fortitude = 0
+        self.proficiencies.reflex = 0
+        self.proficiencies.will = 0
+        #ac
+        #class dc?
 
 
 
@@ -136,6 +161,8 @@ print("dex mod", a_char.abilities.mod("dexterity"))
 print("char mod", a_char.abilities.mod("charisma"))
 a_char.skills.update_skills(a_char)
 print(a_char.skills)
+a_char.saves.update_saves(a_char)
+print(a_char.saves)
 
 ##not starting with a PLAYER character: better to have scalability than not
 ##class CharacterPathfinderSecondEdition - wow, 
