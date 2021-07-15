@@ -59,11 +59,17 @@ class CharSkills(Skills):
 class SavingThrows:
     """Stores a characters saving throws"""
     def __init__(self):
-        self.fortitude = 0
-        self.reflex = 0
-        self.will = 0
+        #Saving throws are 10+proficiencies, so unless I'm confused - which I
+        #am - these should be 10 by default
+        self.perception = 10
+        self.fortitude = 10
+        self.reflex = 10
+        self.will = 10
+        #This is very much stuff I haven't covered yet, or haven't looked at
+        #since Unity tutorials that I don't remember
         
     def update_saves(self, char):
+        self.perception  = char.abilities.mod('wisdom') + char.proficiencies.fortitude
         self.fortitude = char.abilities.mod('constitution') + char.proficiencies.fortitude
         self.reflex = char.abilities.mod('dexterity') + char.proficiencies.reflex
         self.will = char.abilities.mod('wisdom') + char.proficiencies.will
@@ -108,8 +114,6 @@ class AbilityScores:
             return(-1)
         
 
-
-        
             
 class CharacterPathfinder2e:
     """ Base char class - all characters (PCs and NPCs/Monsters) have these traits:"""
