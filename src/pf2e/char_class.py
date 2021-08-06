@@ -1,10 +1,16 @@
+"""Contains the character classes for the pathfinder 2e character tracker"""
 from math import floor
+import weakref
 
 class Skills:
     """Base skills in the game
        Used for both proficiencies and skills
     """
-    def __init__(self):
+    def __init__(self, parent_char):
+        #Keep a reference to the parent character so that we can refer to the chars attributes without having to pass the char.
+        #Use weakref.proxy to prevent garbage collection issues if one instance is deleted without the other.
+        #Will raise a ReferenceError exception if the proxy is accessed after the proxied item is removed.
+        self.parent_char = weakref.proxy(parent_char)
         self.acrobatics = 0
         self.arcana = 0
         self.athletics = 0
@@ -22,57 +28,64 @@ class Skills:
         self.stealth = 0
         self.survival = 0
         self.thievery = 0
-        
+
     def skill_names(self):
         """Returns all the names above (variables in this class)"""
-        return(vars(self))
-    
+        return([var for var in vars(self) if not var == "parent_char"])
+
     def __str__(self):
         """Tells python print how to format these data"""
-        return("\n".join("{:12} {}".format(k, v) for k, v in self.skill_names().items()))
-    
+        return "\n".join("{:12} {}".format(k, v) for k, v in vars(self).items() if not k == "parent_char")
+
 class CharSkills(Skills):
     """Child class of Skills - as skills is also used for proficiencies but should not have the update_skills function"""
-    def update_skills(self, char): 
+    def update_skills(self):
         """Do the maths here to update the skills depending on attributes (ability scores) and proficiencies"""
         #if we had grouped skills by ability scores we could loop over them but I don't think it gains us much.
         for skill in self.skill_names():
             #strength skills
             if skill in ['athletics']:
-                setattr(self, skill, char.abilities.mod("strength") + getattr(char.proficiencies, skill))
+                setattr(self, skill, self.parent_char.abilities.mod("strength")
+                        + getattr(self.parent_char.proficiencies, skill))
             #dex skills
             elif skill in ['acrobatics', 'stealth', 'thievery']:
-                setattr(self, skill, char.abilities.mod("dexterity") + getattr(char.proficiencies, skill))
+                setattr(self, skill, self.parent_char.abilities.mod("dexterity")
+                        + getattr(self.parent_char.proficiencies, skill))
             #int skills - note we will need special case for lores
             elif skill in ['arcana', 'crafting', 'occultism', 'society']:
-                setattr(self, skill, char.abilities.mod("intelligence") + getattr(char.proficiencies, skill))
-            #wis skills 
+                setattr(self, skill, self.parent_char.abilities.mod("intelligence")
+                        + getattr(self.parent_char.proficiencies, skill))
+            #wis skills
             elif skill in ['medicine', 'nature', 'religion', 'survival']:
-                setattr(self, skill, char.abilities.mod("wisdom") + getattr(char.proficiencies, skill))
-            #cha skills 
+                setattr(self, skill, self.parent_char.abilities.mod("wisdom")
+                        + getattr(self.parent_char.proficiencies, skill))
+            #cha skills4
             elif skill in ['deception', 'diplomacy', 'intimidation', 'performance']:
-                setattr(self, skill, char.abilities.mod("charisma") + getattr(char.proficiencies, skill))
+                setattr(self, skill, self.parent_char.abilities.mod("charisma")
+                        + getattr(self.parent_char.proficiencies, skill))
             else:
                 print("How to handle {} has not been coded yet".format(skill))
 
 
 class SavingThrows:
     """Stores a characters saving throws"""
-    def __init__(self):
+    def __init__(self, parent_char):
+        self.parent_char = weakref.proxy(parent_char)
         self.fortitude = 0
         self.reflex = 0
         self.will = 0
-        
-    def update_saves(self, char):
-        self.fortitude = char.abilities.mod('constitution') + char.proficiencies.fortitude
-        self.reflex = char.abilities.mod('dexterity') + char.proficiencies.reflex
-        self.will = char.abilities.mod('wisdom') + char.proficiencies.will
-        
+
+    def update_saves(self):
+        """Recalculates the characters saving throws"""
+        self.fortitude = self.parent_char.abilities.mod('constitution') + self.parent_char.proficiencies.fortitude
+        self.reflex = self.parent_char.abilities.mod('dexterity') + self.parent_char.proficiencies.reflex
+        self.will = self.parent_char.abilities.mod('wisdom') + self.parent_char.proficiencies.will
+
     def __str__(self):
         """Tells python print how to format these data"""
-        return("\n".join("{:12} {}".format(k, v) for k, v in vars(self).items()))
+        return "\n".join("{:12} {}".format(k, v) for k, v in vars(self).items() if not k == "parent_char")
 
-                
+
 class AbilityScores:
     """Stores a characters ability scores and calculates the modifier"""
     def __init__(self):
@@ -85,32 +98,30 @@ class AbilityScores:
 
     def __str__(self):
         """Tells python print how to format these data"""
-        return("\n".join("{:12} {}".format(k, v) for k, v in vars(self).items()))
-    
+        return "\n".join("{:12} {}".format(k, v) for k, v in vars(self).items())
+
     def mod_calc(self, ability):
-        return(floor((ability - 10)/2))
-    
+        """Calculates (and returns) the ability modifier"""
+        return floor((ability - 10)/2)
+
     def mod(self, ability):
+        """Returns ability modifier given input string"""
         #I'm sure there's a nicer way but it escapes me at present
         if ability == "strength":
-            return(self.mod_calc(self.strength))
+            return self.mod_calc(self.strength)
         elif ability == "dexterity":
-            return(self.mod_calc(self.dexterity))
+            return self.mod_calc(self.dexterity)
         elif ability == "constitution":
-            return(self.mod_calc(self.constitution))
+            return self.mod_calc(self.constitution)
         elif ability == "intelligence":
-            return(self.mod_calc(self.intelligence))
+            return self.mod_calc(self.intelligence)
         elif ability == "wisdom":
-            return(self.mod_calc(self.wisdom))
+            return self.mod_calc(self.wisdom)
         elif ability == "charisma":
-            return(self.mod_calc(self.charisma))
-        else:
-            return(-1)
-        
+            return self.mod_calc(self.charisma)
+        return -1
 
 
-        
-            
 class CharacterPathfinder2e:
     """ Base char class - all characters (PCs and NPCs/Monsters) have these traits:"""
     def __init__(self, name):
@@ -124,10 +135,10 @@ class CharacterPathfinder2e:
         self.perception = 0
         self.speed = 0
         self.size = "medium"
-        self.abilities = AbilityScores() #move to playerClass?
-        self.skills = CharSkills() #should maybe move to the playerClass?
-        self.saves = SavingThrows()
-        self.proficiencies = Skills() #should maybe move to the playerClass?
+        self.abilities = AbilityScores()  #move to playerClass?
+        self.skills = CharSkills(self) #pass self so that the skills can ref back to attributes #should maybe move to the playerClass?
+        self.saves = SavingThrows(self)
+        self.proficiencies = Skills(self) #should maybe move to the playerClass?
         #need to add more to profs class is no problem:
         self.proficiencies.perception = 0
         self.proficiencies.fortitude = 0
@@ -159,13 +170,13 @@ print(a_char.abilities)
 print("str mod", a_char.abilities.mod("strength"))
 print("dex mod", a_char.abilities.mod("dexterity"))
 print("char mod", a_char.abilities.mod("charisma"))
-a_char.skills.update_skills(a_char)
+a_char.skills.update_skills()
 print(a_char.skills)
-a_char.saves.update_saves(a_char)
+a_char.saves.update_saves()
 print(a_char.saves)
 
 ##not starting with a PLAYER character: better to have scalability than not
-##class CharacterPathfinderSecondEdition - wow, 
+##class CharacterPathfinderSecondEdition - wow,
 ##    - all characters (PCs and NPCs/Monsters) have these traits:
 ##    name
 ##    level - can be negative
@@ -178,17 +189,17 @@ print(a_char.saves)
 ##    Speed
 ##    size
 ##    - not sure about this one - traits(humanoid, draconic, etc)
-##    
+##
 ##    class CharacterPlayer
 ##    - inherits everything from CharacterSecondEdition
 ##    - all player characters have:
-##    ancestry - grants skill training and ability boosts
+#OB#    ancestry - grants skill training and ability boosts
 ##    background- grants skill training and ability boosts
 ##    class - grants ability boost
 ##    d - aDventurer ability boost
 ##
 ##    proficiency from level
-##    training in skills 
+##    training in skills
 ##    all skills:
 ##        Acrobatics
 ##        Arcana
